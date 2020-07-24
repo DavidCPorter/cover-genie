@@ -1,0 +1,5 @@
+#!/bin/bash
+export GENIE_HOME=/Users/dporter/projects/cover-genie
+chmod +x $GENIE_HOME/bin/genie
+PATH=$PATH:$GENIE_HOME/bin
+

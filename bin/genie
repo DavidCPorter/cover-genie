@@ -1,0 +1,57 @@
+#!/bin/bash
+
+elementIn () {
+  local e match="$1"
+  shift
+  for e; do [[ "$e" == "$match" ]] && return 0; done
+  return 1
+}
+
+createLetter(){
+  if [ "$#" -ne 1 ]; then
+    # shellcheck disable=SC1065
+    printf "\n > genie create requires 1 parameter: filename\n\n"
+    exit
+  fi
+
+  LET_LOC=$GENIE_HOME/letters/
+  mkdir $LET_LOC
+  cd $LET_LOC;mkdir $1
+  cd $1;touch ${1}.txt
+  printf "\nletter $1 created here: $LET_LOC/$1 \n\n"
+}
+
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: genie [name]"
+	exit
+fi
+while (( "$#" )); do
+  case "$1" in
+    create )
+      COMMAND='create'
+      filename="$2"
+      shift $#
+      createLetter $filename
+      ;;
+    * )
+      #for interactive commands
+      COMMAND=$1
+      exp_dir_list=$(ls ${GENIE_HOME}/letters)
+      let_array=($(echo $exp_dir_list))
+      if elementIn $COMMAND "${let_array[@]}"; then
+        python3 $GENIE_HOME/bin/interactive_session.py --name $COMMAND --home $GENIE_HOME --home_user $USER || echo "failed to successfully complete JANUS session"
+        echo "*** COMPLETED INTERACTIVE GENIE SESSION *****"
+        exit
+      fi
+      ARGS="$@"
+      ARGS="$ARGS --home $GENIE_HOME"
+      python3 $GENIE_HOME/bin/$COMMAND.py $ARGS || echo "> janus $ARGS is not a valid command. Please be sure to follow API parameter rules"
+      shift "$#"
+      ;;
+
+  esac
+done
+
+exit
+
