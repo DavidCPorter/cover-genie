@@ -11,17 +11,21 @@ import yaml
 # from collections import OrderedDict
 from jinja2 import Template
 import re
-# from _graph_node import Noder
+from rich.console import Console
+from _genie_pdfs_ import PDF
 
+console = Console(width=90)
+# from _graph_node import Noder
 
 def genieContext(exp_dict, default_sections):
     name = exp_dict.get('--name')
     home_dir = exp_dict.get('--home')
+    output_path = home_dir+'/letters/'+name+'/'+name+'.txt'
     default_sections = default_sections[:]
-    company_name = input('please enter company name:\n')
-    job_title= input('please enter job title:\n')
-    job_location = input('enter location:\n')
-    global_group = dict(company_name=company_name, job_title=job_title, job_location=job_location)
+    company_name = input('\nplease enter company name:\n')
+    job_title= input('\nplease enter job title:\n')
+    job_location = input('\nenter location:\n')
+    global_group = dict(companyName=company_name, jobTitle=job_title, jobLocation=job_location)
 
     def clear_cover_letter():
         f = open(home_dir+"/letters/"+name+"/"+name+".txt", "w")
@@ -31,31 +35,52 @@ def genieContext(exp_dict, default_sections):
         with open(home_dir+"/letters/"+name+"/"+section+".txt", "w+") as letter, open(home_dir+"/sections/"+section+"/boiler", 'r') as boiler:
             boiler_part = boiler.read()
             for custom_tag,custom_part in var_dict.items():
-                boiler_part = boiler_part.replace(custom_tag,custom_part)
-            letter.write(boiler_part)
+                boiler_part = boiler_part.replace(custom_tag,custom_part.rstrip('\n'))
+            letter.write(boiler_part+'\n'.strip('_'))
 
     def update_cover_letter(section):
         clear_cover_letter()
         index = default_sections.index(section)
-        for sec in default_sections[:index]:
+        for sec in default_sections[:index+1]:
             with open(home_dir+"/letters/"+name+"/"+sec+".txt", 'r') as sectionfile, open(home_dir+"/letters/"+name+"/"+name+".txt", 'a') as letter:
-                letter.write(sectionfile.read())
+                tmp = sectionfile.read()
+                final_section = tmp.replace('_','')
+                letter.write(final_section)
 
     def produce_pdf():
-        with open(home_dir+"/letters/"+name+"/"+name+".txt") as file_:
-            template = Template(file_.read())
-        template = template.render( )
+        pdf = PDF()
+        pdf.generate_page(output_path)
+        pdf.output(output_path[:-4]+'.pdf', 'F').encode('latin-1')
 
-        with open(home_dir+"/letters/"+name+"/"+name+".txt", "w") as letter:
-            letter.write(template)
+    def add_custom(name,choice_file):
+        while True:
+            sentance = input('\nENTER SENTANCE:\n')
+            console.print("\nEnter [bold green]y[/bold green] to confirm or [bold bright_red]c[/bold bright_red] to cancel or [bold yellow]r[/bold yellow] to cancel:\n")
+            console.print(sentance)
+            console.print("\n")
+            confirmation = input('> ')
+
+            if confirmation == 'y':
+                with open(home_dir + "/sections/" + name + "/" + choice_file, "a") as choice_group:
+                    choice_group.write('\n'+sentance)
+                return sentance
+
+            elif confirmation == 'r':
+                continue
+
+            elif confirmation == 'c':
+                console.print("\ncancelled custom sentance\n")
+                break
+
 
     def readboiler(name):
         """ returns a dict of custom values  """
         dynamic_sentances=[]
-        with open(name+'/boiler', 'r') as boiler:
-            section = boiler.read()
-            print(section)
-            dynamic_sentances = re.findall(r"\[([A-Za-z0-9_:]+)\]", section)
+        with open(name+'/boiler', 'r') as boiler_file:
+            boiler = boiler_file.read()
+            console.print("\n[italic yellow]Boiler for [bold yellow]" + name.upper() + "[/bold yellow] section:[/italic yellow]\n")
+            console.print(boiler.replace('__','[bold red]').replace('_', '[/bold red]'))
+            dynamic_sentances = re.findall(r"__([A-Za-z0-9\-:]+)_", boiler)
 
         custom_dict = {}
         for sentance_tag in dynamic_sentances:
@@ -64,23 +89,52 @@ def genieContext(exp_dict, default_sections):
                 custom_dict.update({sentance_tag:global_group.get(choice_file)})
                 continue
 
+
             custom_part = ''
             with open(name+'/'+choice_file, 'r') as f:
-                choice_list = [str(count) + ' -> ' + choice for count, choice in enumerate(f.readlines(), 0)]
-                while sentance_type != 'exit':
-                    print(choice_list)
+                choice_list = [choice for choice in f.readlines()]
+                prompt_bit = "Choose a"
+                while True:
+                    console.print('\n[italic green3]'+prompt_bit+' custom sentance[/italic green3] for '+'[bold red]'+choice_file+'[/bold red] tag:\n')
+
+                    for key,choice in enumerate(choice_list, 1):
+                        console.print(str(key)+' -> '+choice+'\n')
+
                     user_choice = input('> ')
-                    user_choice.split()
-                    user_choice.replace('  ', ' ')
-                    if user_choice == 'done':
-                        sentance_type = 'exit'
+                    user_choice = user_choice.rstrip(' ')
+
+                    if user_choice == 'n':
+                       break
+
+                    if user_choice == 'other':
+                        custom_sentance = add_custom(name,choice_file)
+                        # in case user cancelled:
+                        if len(custom_sentance) > 0:
+                            if sentance_type == 'bullets':
+                                custom_part = custom_part+' '+custom_sentance+'\n'
+                            else:
+                                custom_part = custom_part+' '+custom_sentance
+
+                        if sentance_type == 'single':
+                            break
                         continue
 
-                    choice = choice_list[int(user_choice)]
-                    choice = choice.lstrip('0123456789 ->')
-                    custom_part = custom_part+' '+choice
+                    try:
+                        if int(user_choice) == 0:
+                            console.print('\n\n[bold red] ** CHOICE [bold blue]'+user_choice+'[/bold blue] NOT VALID ** [/bold red]')
+                        choice = choice_list.pop(int(user_choice)-1)
+                    except (ValueError, IndexError) as e:
+                        console.print('\n\n[bold red] ** CHOICE [bold blue]'+user_choice+'[/bold blue] NOT VALID ** [/bold red]')
+
+                    choice = choice.lstrip('0123456789')
+                    custom_part = custom_part+' '+choice.rstrip('\n')
                     if sentance_type == 'single':
                         break
+                    # if no more choices then break
+                    if not len(choice_list):
+                        break
+
+                    prompt_bit = "Choose [bold]ANOTHER[/bold]"
 
                 custom_dict.update({sentance_tag:custom_part})
 
@@ -93,10 +147,11 @@ def genieContext(exp_dict, default_sections):
             variable_dict = readboiler(section)
             update_letter_section(variable_dict, section)
             update_cover_letter(section)
-            pdb.set_trace()
 
+        def generate_letter():
+            produce_pdf()
 
-        decorated_step = dict(abstract_section=abstract_section)
+        decorated_step = dict(abstract_section=abstract_section, generate_letter=generate_letter)
         return_function = decorated_step.get(cmd)
         return return_function
 
@@ -104,25 +159,31 @@ def genieContext(exp_dict, default_sections):
 
 
 def main(interactive_dict):
-    print(interactive_dict)
+    console.print(interactive_dict)
     os.chdir(str(interactive_dict.get('--home')) + '/sections')
     default_steps = ['intro', 'overview', 'janus', 'background', 'skills', 'summary']
     letter_context = genieContext(interactive_dict, default_steps)
     try:
+        if input("enter 'print' to generate pdf, otherwise hit enter\n") == 'print':
+            generate_letter = letter_context('generate_letter')
+            generate_letter()
+            return
+
         while default_steps:
             section_function = letter_context('abstract_section')
             section_function(default_steps.pop(0))
 
-        produce_pdf(interactive_dict.get('--name'))
+        generate_letter = letter_context('generate_letter')
+        generate_letter()
 
     except (RuntimeError, TypeError, NameError, IndexError) as e:
         traceback.print_exc()
-        print("error -> ", e)
+        console.print("error -> ", e)
 
 
 
 if __name__ == '__main__':
-    print(sys.argv)
+    console.print(sys.argv)
     args = sys.argv[1:]
     i_dict = {args[x]: args[x + 1] for x in range(0, len(args) - 1) if x % 2 == 0}
     main(i_dict)

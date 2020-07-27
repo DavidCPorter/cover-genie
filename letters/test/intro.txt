@@ -1,4 +1,0 @@
-I am a recent graduate (Dec ’18) of the Master program in Computer Science at the University of Illinois at Chicago. I returned to school after a time in business during which I developed a product, ClaimDocs, for the insurance market. [ In graduate school I took an untraditional, more industrial, path focusing on evaluating cloud-native enterprise architectures because I thought there was a need to provide better comparative performance analysis of cloud-native systems.
-] this is a test [ In graduate school I took an untraditional, more industrial, path focusing on evaluating cloud-native enterprise architectures because I thought there was a need to provide better comparative performance analysis of cloud-native systems. this is another example of a different variable in the things
-]
-

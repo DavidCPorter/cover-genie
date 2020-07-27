@@ -18,7 +18,7 @@ createLetter(){
   mkdir $LET_LOC
   cd $LET_LOC;mkdir $1
   cd $1;touch ${1}.txt
-  printf "\nletter $1 created here: $LET_LOC/$1 \n\n"
+  printf "\nletter $1 created here: ${LET_LOC}$1 \n\n"
 }
 
 
