@@ -36,7 +36,7 @@ def genieContext(exp_dict, default_sections):
             boiler_part = boiler.read()
             for custom_tag,custom_part in var_dict.items():
                 boiler_part = boiler_part.replace(custom_tag,custom_part.rstrip('\n'))
-            letter.write(boiler_part+'\n'.strip('_'))
+            letter.write(boiler_part+'\n')
 
     def update_cover_letter(section):
         clear_cover_letter()
@@ -45,24 +45,29 @@ def genieContext(exp_dict, default_sections):
             with open(home_dir+"/letters/"+name+"/"+sec+".txt", 'r') as sectionfile, open(home_dir+"/letters/"+name+"/"+name+".txt", 'a') as letter:
                 tmp = sectionfile.read()
                 final_section = tmp.replace('_','')
-                letter.write(final_section)
+                letter.write(final_section.format(company=company_name))
 
     def produce_pdf():
+        update_cover_letter(default_sections[-1])
+        pdf_filename = output_path[:-4]+'.pdf'
         pdf = PDF()
         pdf.generate_page(output_path)
-        pdf.output(output_path[:-4]+'.pdf', 'F').encode('latin-1')
+        pdf.output(pdf_filename, 'F').encode('latin-1')
+        os.system('open '+pdf_filename)
 
-    def add_custom(name,choice_file):
+    def add_custom(name,choice_file, sentance_type):
         while True:
             sentance = input('\nENTER SENTANCE:\n')
             console.print("\nEnter [bold green]y[/bold green] to confirm or [bold bright_red]c[/bold bright_red] to cancel or [bold yellow]r[/bold yellow] to cancel:\n")
+            if sentance_type == 'bullets':
+                sentance = '* '+sentance
             console.print(sentance)
             console.print("\n")
             confirmation = input('> ')
 
             if confirmation == 'y':
                 with open(home_dir + "/sections/" + name + "/" + choice_file, "a") as choice_group:
-                    choice_group.write('\n'+sentance)
+                    choice_group.write(sentance+'\n')
                 return sentance
 
             elif confirmation == 'r':
@@ -107,7 +112,7 @@ def genieContext(exp_dict, default_sections):
                        break
 
                     if user_choice == 'other':
-                        custom_sentance = add_custom(name,choice_file)
+                        custom_sentance = add_custom(name,choice_file,sentance_type)
                         # in case user cancelled:
                         if len(custom_sentance) > 0:
                             if sentance_type == 'bullets':
@@ -127,8 +132,12 @@ def genieContext(exp_dict, default_sections):
                         console.print('\n\n[bold red] ** CHOICE [bold blue]'+user_choice+'[/bold blue] NOT VALID ** [/bold red]')
 
                     choice = choice.lstrip('0123456789')
-                    custom_part = custom_part+' '+choice.rstrip('\n')
-                    if sentance_type == 'single':
+                    if sentance_type == 'bullets':
+                        custom_part = custom_part+' '+choice
+                    elif sentance_type == 'sequence':
+                        custom_part = custom_part + ' ' + choice.rstrip('\n')
+                    else:
+                        custom_part = custom_part + ' ' + choice.rstrip('\n')
                         break
                     # if no more choices then break
                     if not len(choice_list):
@@ -136,7 +145,7 @@ def genieContext(exp_dict, default_sections):
 
                     prompt_bit = "Choose [bold]ANOTHER[/bold]"
 
-                custom_dict.update({sentance_tag:custom_part})
+                custom_dict.update({sentance_tag:custom_part.lstrip(' ')})
 
         return custom_dict
 
@@ -150,6 +159,7 @@ def genieContext(exp_dict, default_sections):
 
         def generate_letter():
             produce_pdf()
+
 
         decorated_step = dict(abstract_section=abstract_section, generate_letter=generate_letter)
         return_function = decorated_step.get(cmd)
