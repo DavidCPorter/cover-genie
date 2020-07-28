@@ -127,8 +127,11 @@ def genieContext(exp_dict, default_sections):
                     try:
                         if int(user_choice) == 0:
                             console.print('\n\n[bold red] ** CHOICE [bold blue]'+user_choice+'[/bold blue] NOT VALID ** [/bold red]')
+                            continue
                         choice = choice_list.pop(int(user_choice)-1)
+
                     except (ValueError, IndexError) as e:
+                        console.print('\n'+e+'\n')
                         console.print('\n\n[bold red] ** CHOICE [bold blue]'+user_choice+'[/bold blue] NOT VALID ** [/bold red]')
 
                     choice = choice.lstrip('0123456789')
